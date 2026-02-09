@@ -66,6 +66,36 @@ class Example(QWidget):
             self.getImage()
             self.updateImage()
 
+        if event.key() == Qt.Key.Key_Up:
+            if self.longitude < 90:
+                self.longitude += 5
+            else:
+                self.longitude = 90
+            self.getImage()
+            self.updateImage()
+        if event.key() == Qt.Key.Key_Down:
+            if self.longitude > -90:
+                self.longitude -= 5
+            else:
+                self.longitude = -90
+            self.getImage()
+            self.updateImage()
+
+        if event.key() == Qt.Key.Key_Left:
+            if self.latitude < 180:
+                self.latitude += 10
+            else:
+                self.latitude = 180
+            self.getImage()
+            self.updateImage()
+        if event.key() == Qt.Key.Key_Right:
+            if self.latitude > -180:
+                self.latitude -= 10
+            else:
+                self.latitude = -180
+            self.getImage()
+            self.updateImage()
+
     def closeEvent(self, event):
         """При закрытии формы подчищаем за собой"""
         os.remove(self.map_file)
