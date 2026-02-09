@@ -19,6 +19,7 @@ class Example(QWidget):
         self.latitude = 37.530887
         self.longitude = 55.703118
         self.z = 12
+        self.theme = 'light'
 
         self.getImage()
         self.initUI()
@@ -29,7 +30,8 @@ class Example(QWidget):
         params = {
             'apikey': self.api_key,
             'll': f'{self.latitude},{self.longitude}',
-            'z': self.z
+            'z': self.z,
+            'theme': self.theme
         }
         response = requests.get(url=server_address, params=params)
 
@@ -68,33 +70,36 @@ class Example(QWidget):
 
         if event.key() == Qt.Key.Key_Up:
             if self.longitude < 90:
-                self.longitude += 5
+                self.longitude += 0.1
             else:
                 self.longitude = 90
             self.getImage()
             self.updateImage()
         if event.key() == Qt.Key.Key_Down:
             if self.longitude > -90:
-                self.longitude -= 5
+                self.longitude -= 0.1
             else:
                 self.longitude = -90
             self.getImage()
             self.updateImage()
 
         if event.key() == Qt.Key.Key_Left:
-            if self.latitude < 180:
-                self.latitude += 10
-            else:
-                self.latitude = 180
-            self.getImage()
-            self.updateImage()
-        if event.key() == Qt.Key.Key_Right:
             if self.latitude > -180:
-                self.latitude -= 10
+                self.latitude -= 0.1
             else:
                 self.latitude = -180
             self.getImage()
             self.updateImage()
+        if event.key() == Qt.Key.Key_Right:
+            if self.latitude < 180:
+                self.latitude += 0.1
+            else:
+                self.latitude = 180
+            self.getImage()
+            self.updateImage()
+
+        if event.key() == Qt.Key.Key_R:
+            pass
 
     def closeEvent(self, event):
         """При закрытии формы подчищаем за собой"""
