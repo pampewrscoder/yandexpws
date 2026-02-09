@@ -2,8 +2,10 @@ import os
 import sys
 
 import requests
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel
+from PyQt6.uic.Compiler.qtproxies import QtCore
 
 SCREEN_SIZE = [600, 450]
 
@@ -11,6 +13,8 @@ SCREEN_SIZE = [600, 450]
 class Example(QWidget):
     def __init__(self):
         super().__init__()
+        self.image = QLabel(self)
+
         self.api_key = 'f3a0fe3a-b07e-4840-a1da-06f18b2ddf13'
         self.latitude = 37.530887
         self.longitude = 55.703118
@@ -18,6 +22,7 @@ class Example(QWidget):
 
         self.getImage()
         self.initUI()
+        self.updateImage()
 
     def getImage(self):
         server_address = 'https://static-maps.yandex.ru/v1?'
@@ -41,12 +46,25 @@ class Example(QWidget):
         self.setGeometry(100, 100, *SCREEN_SIZE)
         self.setWindowTitle('Отображение карты')
 
-        ## Изображение
+    def updateImage(self):
         self.pixmap = QPixmap(self.map_file)
-        self.image = QLabel(self)
-        self.image.move(0, 0)
-        self.image.resize(600, 450)
         self.image.setPixmap(self.pixmap)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_PageUp:
+            if self.z < 21:
+                self.z += 1
+            else:
+                self.z = 21
+            self.getImage()
+            self.updateImage()
+        if event.key() == Qt.Key.Key_PageDown:
+            if self.z > 0:
+                self.z -= 1
+            else:
+                self.z = 0
+            self.getImage()
+            self.updateImage()
 
     def closeEvent(self, event):
         """При закрытии формы подчищаем за собой"""
