@@ -99,7 +99,12 @@ class Example(QWidget):
             self.updateImage()
 
         if event.key() == Qt.Key.Key_R:
-            pass
+            if self.theme == 'light':
+                self.theme = 'dark'
+            else:
+                self.theme = 'light'
+            self.getImage()
+            self.updateImage()
 
     def closeEvent(self, event):
         """При закрытии формы подчищаем за собой"""
