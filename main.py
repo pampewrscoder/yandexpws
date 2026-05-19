@@ -117,32 +117,32 @@ class Example(QWidget):
             self.updateImage()
 
         if event.key() == Qt.Key.Key_Up:
-            if self.longitude < 90:
-                self.longitude += 0.1
+            if self.latitude < 85:
+                self.latitude += 0.1
             else:
-                self.longitude = 90
+                self.latitude = 85
             self.getImage()
             self.updateImage()
         if event.key() == Qt.Key.Key_Down:
-            if self.longitude > -90:
-                self.longitude -= 0.1
+            if self.latitude > -85:
+                self.latitude -= 0.1
             else:
-                self.longitude = -90
+                self.latitude = -85
             self.getImage()
             self.updateImage()
 
         if event.key() == Qt.Key.Key_Left:
-            if self.latitude > -180:
-                self.latitude -= 0.1
+            if self.longitude > -180:
+                self.longitude -= 0.1
             else:
-                self.latitude = -180
+                self.longitude = -180
             self.getImage()
             self.updateImage()
         if event.key() == Qt.Key.Key_Right:
-            if self.latitude < 180:
-                self.latitude += 0.1
+            if self.longitude < 180:
+                self.longitude += 0.1
             else:
-                self.latitude = 180
+                self.longitude = 180
             self.getImage()
             self.updateImage()
 
