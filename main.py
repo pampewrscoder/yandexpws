@@ -26,6 +26,7 @@ class Example(QWidget):
         self.theme = 'light'
         self.marker = None
         self.postcode = None
+        self.base_address = None
         self.search_input.clear()
 
         self.getImage()
@@ -74,6 +75,7 @@ class Example(QWidget):
         self.search_button.clicked.connect(self.search_object)
         self.search_input.returnPressed.connect(self.search_object)
         self.reset_button.clicked.connect(self.reset_marker)
+        self.postcode_checkbox.stateChanged.connect(self.toggle_postcode)
 
     def search_object(self):
         query = self.search_input.text().strip()
@@ -96,12 +98,13 @@ class Example(QWidget):
         try:
             geo_object = data['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']
             pos = geo_object['Point']['pos']
-            address = geo_object['metaDataProperty']['GeocoderResponseMetaData']['text']
+            self.base_address = geo_object['metaDataProperty']['GeocoderResponseMetaData']['text']
             try:
                 self.postcode = geo_object['metaDataProperty']['GeocoderResponseMetaData']['Address']['postal_code']
             except (KeyError, TypeError):
                 self.postcode = None
 
+            address = self.base_address
             if self.postcode_checkbox.isChecked() and self.postcode:
                 address = f"{address}, {self.postcode}"
 
@@ -116,9 +119,17 @@ class Example(QWidget):
         except (KeyError, IndexError):
             print("Объект не найден")
 
+    def toggle_postcode(self):
+        if self.base_address and self.postcode:
+            address = self.base_address
+            if self.postcode_checkbox.isChecked():
+                address = f"{address}, {self.postcode}"
+            self.address_label.setText(address)
+
     def reset_marker(self):
         self.marker = None
         self.postcode = None
+        self.base_address = None
         self.search_input.clear()
         self.address_label.clear()
         self.getImage()
