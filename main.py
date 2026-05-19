@@ -4,22 +4,24 @@ import sys
 import requests
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel
-from PyQt6.uic.Compiler.qtproxies import QtCore
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QHBoxLayout, QVBoxLayout
 
-SCREEN_SIZE = [600, 450]
+SCREEN_SIZE = [600, 500]
 
 
 class Example(QWidget):
     def __init__(self):
         super().__init__()
         self.image = QLabel(self)
+        self.search_input = QLineEdit(self)
+        self.search_button = QPushButton('Искать', self)
 
         self.api_key = 'f3a0fe3a-b07e-4840-a1da-06f18b2ddf13'
         self.latitude = 37.530887
         self.longitude = 55.703118
         self.z = 12
         self.theme = 'light'
+        self.marker = None
 
         self.getImage()
         self.initUI()
@@ -29,10 +31,13 @@ class Example(QWidget):
         server_address = 'https://static-maps.yandex.ru/v1?'
         params = {
             'apikey': self.api_key,
-            'll': f'{self.latitude},{self.longitude}',
+            'll': f'{self.longitude},{self.latitude}',
             'z': self.z,
             'theme': self.theme
         }
+        if self.marker:
+            params['pt'] = self.marker
+
         response = requests.get(url=server_address, params=params)
 
         if not response:
@@ -47,6 +52,49 @@ class Example(QWidget):
     def initUI(self):
         self.setGeometry(100, 100, *SCREEN_SIZE)
         self.setWindowTitle('Отображение карты')
+
+        control_layout = QHBoxLayout()
+        control_layout.addWidget(self.search_input)
+        control_layout.addWidget(self.search_button)
+
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(control_layout)
+        main_layout.addWidget(self.image)
+
+        self.setLayout(main_layout)
+
+        self.search_button.clicked.connect(self.search_object)
+        self.search_input.returnPressed.connect(self.search_object)
+
+    def search_object(self):
+        query = self.search_input.text().strip()
+        if not query:
+            return
+
+        geocoder_url = "https://geocode-maps.yandex.ru/1.x/"
+        params = {
+            'apikey': self.api_key,
+            'geocode': query,
+            'format': 'json'
+        }
+
+        response = requests.get(url=geocoder_url, params=params)
+        if not response or response.status_code != 200:
+            print("Ошибка геокодирования")
+            return
+
+        data = response.json()
+        try:
+            pos = data['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']['Point']['pos']
+            lon, lat = pos.split()
+            self.longitude = float(lon)
+            self.latitude = float(lat)
+            self.z = 10
+            self.marker = f'{self.longitude},{self.latitude},pm2rdm'
+            self.getImage()
+            self.updateImage()
+        except (KeyError, IndexError):
+            print("Объект не найден")
 
     def updateImage(self):
         self.pixmap = QPixmap(self.map_file)
@@ -107,7 +155,6 @@ class Example(QWidget):
             self.updateImage()
 
     def closeEvent(self, event):
-        """При закрытии формы подчищаем за собой"""
         os.remove(self.map_file)
 
 
