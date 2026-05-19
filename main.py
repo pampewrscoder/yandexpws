@@ -4,7 +4,7 @@ import sys
 import requests
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QHBoxLayout, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QCheckBox, QHBoxLayout, QVBoxLayout
 
 SCREEN_SIZE = [600, 500]
 
@@ -17,6 +17,7 @@ class Example(QWidget):
         self.search_button = QPushButton('Искать', self)
         self.reset_button = QPushButton('Сброс', self)
         self.address_label = QLabel(self)
+        self.postcode_checkbox = QCheckBox('Добавить почтовый индекс', self)
 
         self.api_key = 'f3a0fe3a-b07e-4840-a1da-06f18b2ddf13'
         self.latitude = 37.530887
@@ -24,6 +25,7 @@ class Example(QWidget):
         self.z = 12
         self.theme = 'light'
         self.marker = None
+        self.postcode = None
         self.search_input.clear()
 
         self.getImage()
@@ -60,6 +62,7 @@ class Example(QWidget):
         control_layout.addWidget(self.search_input)
         control_layout.addWidget(self.search_button)
         control_layout.addWidget(self.reset_button)
+        control_layout.addWidget(self.postcode_checkbox)
 
         main_layout = QVBoxLayout()
         main_layout.addLayout(control_layout)
@@ -94,6 +97,14 @@ class Example(QWidget):
             geo_object = data['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']
             pos = geo_object['Point']['pos']
             address = geo_object['metaDataProperty']['GeocoderResponseMetaData']['text']
+            try:
+                self.postcode = geo_object['metaDataProperty']['GeocoderResponseMetaData']['Address']['postal_code']
+            except (KeyError, TypeError):
+                self.postcode = None
+
+            if self.postcode_checkbox.isChecked() and self.postcode:
+                address = f"{address}, {self.postcode}"
+
             lon, lat = pos.split()
             self.longitude = float(lon)
             self.latitude = float(lat)
@@ -107,6 +118,7 @@ class Example(QWidget):
 
     def reset_marker(self):
         self.marker = None
+        self.postcode = None
         self.search_input.clear()
         self.address_label.clear()
         self.getImage()
