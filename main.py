@@ -3,21 +3,31 @@ import sys
 
 import requests
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QPainter, QPen
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QCheckBox, QHBoxLayout, QVBoxLayout
 
 SCREEN_SIZE = [600, 500]
 
 
+class ClickableLabel(QLabel):
+    clicked = None
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.clicked = None
+
+
 class Example(QWidget):
     def __init__(self):
         super().__init__()
-        self.image = QLabel(self)
+        self.image = ClickableLabel(self)
         self.search_input = QLineEdit(self)
         self.search_button = QPushButton('Искать', self)
         self.reset_button = QPushButton('Сброс', self)
         self.address_label = QLabel(self)
         self.postcode_checkbox = QCheckBox('Добавить почтовый индекс', self)
+        self.click_longitude = None
+        self.click_latitude = None
 
         self.api_key = 'f3a0fe3a-b07e-4840-a1da-06f18b2ddf13'
         self.latitude = 37.530887
@@ -76,6 +86,7 @@ class Example(QWidget):
         self.search_input.returnPressed.connect(self.search_object)
         self.reset_button.clicked.connect(self.reset_marker)
         self.postcode_checkbox.stateChanged.connect(self.toggle_postcode)
+        self.image.mousePressEvent = self.on_map_click
 
     def search_object(self):
         query = self.search_input.text().strip()
@@ -126,10 +137,65 @@ class Example(QWidget):
                 address = f"{address}, {self.postcode}"
             self.address_label.setText(address)
 
+    def on_map_click(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            x = event.position().x()
+            y = event.position().y()
+
+            width = self.image.width()
+            height = self.image.height()
+
+            dx = (x - width / 2) / (width / 2)
+            dy = (height / 2 - y) / (height / 2)
+
+            n = 2 ** self.z
+            lon_per_pixel = 360 / (256 * n)
+            self.click_longitude = self.longitude + dx * (128 * n) * lon_per_pixel
+
+            lat_per_pixel = 180 / (128 * n)
+            self.click_latitude = self.latitude + dy * (128 * n) * lat_per_pixel
+
+            self.reverse_geocode(self.click_longitude, self.click_latitude)
+
+    def reverse_geocode(self, lon, lat):
+        geocoder_url = "https://geocode-maps.yandex.ru/1.x/"
+        params = {
+            'apikey': self.api_key,
+            'geocode': f'{lon},{lat}',
+            'format': 'json'
+        }
+
+        response = requests.get(url=geocoder_url, params=params)
+        if not response or response.status_code != 200:
+            print("Ошибка геокодирования")
+            return
+
+        data = response.json()
+        try:
+            geo_object = data['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']
+            self.base_address = geo_object['metaDataProperty']['GeocoderResponseMetaData']['text']
+            try:
+                self.postcode = geo_object['metaDataProperty']['GeocoderResponseMetaData']['Address']['postal_code']
+            except (KeyError, TypeError):
+                self.postcode = None
+
+            address = self.base_address
+            if self.postcode_checkbox.isChecked() and self.postcode:
+                address = f"{address}, {self.postcode}"
+
+            self.marker = f'{lon},{lat},pm2rdm'
+            self.address_label.setText(address)
+            self.getImage()
+            self.updateImage()
+        except (KeyError, IndexError):
+            print("Объект не найден")
+
     def reset_marker(self):
         self.marker = None
         self.postcode = None
         self.base_address = None
+        self.click_longitude = None
+        self.click_latitude = None
         self.search_input.clear()
         self.address_label.clear()
         self.getImage()
