@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 
 import requests
 from PyQt6.QtCore import Qt
@@ -138,24 +139,28 @@ class Example(QWidget):
             self.address_label.setText(address)
 
     def on_map_click(self, event):
+        x = event.position().x()
+        y = event.position().y()
+
+        width = self.image.width()
+        height = self.image.height()
+
+        dx = (x - width / 2) / (width / 2)
+        dy = (height / 2 - y) / (height / 2)
+
+        n = 2 ** self.z
+        lon_per_pixel = 360 / (256 * n)
+        click_lon = self.longitude + dx * (128 * n) * lon_per_pixel
+
+        lat_per_pixel = 180 / (128 * n)
+        click_lat = self.latitude + dy * (128 * n) * lat_per_pixel
+
         if event.button() == Qt.MouseButton.LeftButton:
-            x = event.position().x()
-            y = event.position().y()
-
-            width = self.image.width()
-            height = self.image.height()
-
-            dx = (x - width / 2) / (width / 2)
-            dy = (height / 2 - y) / (height / 2)
-
-            n = 2 ** self.z
-            lon_per_pixel = 360 / (256 * n)
-            self.click_longitude = self.longitude + dx * (128 * n) * lon_per_pixel
-
-            lat_per_pixel = 180 / (128 * n)
-            self.click_latitude = self.latitude + dy * (128 * n) * lat_per_pixel
-
+            self.click_longitude = click_lon
+            self.click_latitude = click_lat
             self.reverse_geocode(self.click_longitude, self.click_latitude)
+        elif event.button() == Qt.MouseButton.RightButton:
+            self.search_organization(click_lon, click_lat)
 
     def reverse_geocode(self, lon, lat):
         geocoder_url = "https://geocode-maps.yandex.ru/1.x/"
@@ -189,6 +194,70 @@ class Example(QWidget):
             self.updateImage()
         except (KeyError, IndexError):
             print("Объект не найден")
+
+    def search_organization(self, lon, lat):
+        self.marker = None
+        self.postcode = None
+        self.base_address = None
+        self.search_input.clear()
+        self.address_label.clear()
+
+        search_url = "https://search-maps.yandex.ru/v1/"
+        params = {
+            'apikey': self.api_key,
+            'text': '',
+            'll': f'{lon},{lat}',
+            'spn': '0.005,0.005',
+            'type': 'biz',
+            'results': 1
+        }
+
+        response = requests.get(url=search_url, params=params)
+        if not response or response.status_code != 200:
+            print("Ошибка поиска организаций")
+            return
+
+        data = response.json()
+        try:
+            feature = data['features'][0]
+            org_point = feature['geometry']['coordinates']
+            org_lon, org_lat = org_point[0], org_point[1]
+
+            distance = self.calculate_distance(lon, lat, org_lon, org_lat)
+
+            if distance <= 50:
+                self.base_address = feature['properties']['name']
+                address_details = feature.get('properties', {}).get('description', '')
+                if address_details:
+                    self.base_address = f"{self.base_address}, {address_details}"
+
+                try:
+                    self.postcode = feature['properties']['CompanyMetaData'].get('address', {}).get('postal_code')
+                except (KeyError, AttributeError):
+                    self.postcode = None
+
+                address = self.base_address
+                if self.postcode_checkbox.isChecked() and self.postcode:
+                    address = f"{address}, {self.postcode}"
+
+                self.marker = f'{org_lon},{org_lat},pm2rdm'
+                self.address_label.setText(address)
+                self.getImage()
+                self.updateImage()
+        except (KeyError, IndexError):
+            pass
+
+    def calculate_distance(self, lon1, lat1, lon2, lat2):
+        R = 6371000
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+
+        a = math.sin(delta_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+        return R * c
 
     def reset_marker(self):
         self.marker = None
