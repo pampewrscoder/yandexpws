@@ -16,6 +16,7 @@ class Example(QWidget):
         self.search_input = QLineEdit(self)
         self.search_button = QPushButton('Искать', self)
         self.reset_button = QPushButton('Сброс', self)
+        self.address_label = QLabel(self)
 
         self.api_key = 'f3a0fe3a-b07e-4840-a1da-06f18b2ddf13'
         self.latitude = 37.530887
@@ -62,6 +63,7 @@ class Example(QWidget):
 
         main_layout = QVBoxLayout()
         main_layout.addLayout(control_layout)
+        main_layout.addWidget(self.address_label)
         main_layout.addWidget(self.image)
 
         self.setLayout(main_layout)
@@ -89,12 +91,15 @@ class Example(QWidget):
 
         data = response.json()
         try:
-            pos = data['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']['Point']['pos']
+            geo_object = data['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']
+            pos = geo_object['Point']['pos']
+            address = geo_object['metaDataProperty']['GeocoderResponseMetaData']['text']
             lon, lat = pos.split()
             self.longitude = float(lon)
             self.latitude = float(lat)
             self.z = 10
             self.marker = f'{self.longitude},{self.latitude},pm2rdm'
+            self.address_label.setText(address)
             self.getImage()
             self.updateImage()
         except (KeyError, IndexError):
@@ -103,6 +108,7 @@ class Example(QWidget):
     def reset_marker(self):
         self.marker = None
         self.search_input.clear()
+        self.address_label.clear()
         self.getImage()
         self.updateImage()
 
