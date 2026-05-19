@@ -15,6 +15,7 @@ class Example(QWidget):
         self.image = QLabel(self)
         self.search_input = QLineEdit(self)
         self.search_button = QPushButton('Искать', self)
+        self.reset_button = QPushButton('Сброс', self)
 
         self.api_key = 'f3a0fe3a-b07e-4840-a1da-06f18b2ddf13'
         self.latitude = 37.530887
@@ -22,6 +23,7 @@ class Example(QWidget):
         self.z = 12
         self.theme = 'light'
         self.marker = None
+        self.search_input.clear()
 
         self.getImage()
         self.initUI()
@@ -56,6 +58,7 @@ class Example(QWidget):
         control_layout = QHBoxLayout()
         control_layout.addWidget(self.search_input)
         control_layout.addWidget(self.search_button)
+        control_layout.addWidget(self.reset_button)
 
         main_layout = QVBoxLayout()
         main_layout.addLayout(control_layout)
@@ -65,6 +68,7 @@ class Example(QWidget):
 
         self.search_button.clicked.connect(self.search_object)
         self.search_input.returnPressed.connect(self.search_object)
+        self.reset_button.clicked.connect(self.reset_marker)
 
     def search_object(self):
         query = self.search_input.text().strip()
@@ -95,6 +99,12 @@ class Example(QWidget):
             self.updateImage()
         except (KeyError, IndexError):
             print("Объект не найден")
+
+    def reset_marker(self):
+        self.marker = None
+        self.search_input.clear()
+        self.getImage()
+        self.updateImage()
 
     def updateImage(self):
         self.pixmap = QPixmap(self.map_file)
